@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: |
+          echo "tested_sha=${{ github.sha }}" > evidence.txt
+          echo "pr_head_sha=${{ github.event.pull_request.head.sha }}" >> evidence.txt
+          echo "run_id=${{ github.run_id }}" >> evidence.txt
+          echo "trigger=${{ github.event_name }}" >> evidence.txt
+          echo "result=pass" >> evidence.txt
+          cat evidence.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: test-evidence
+          path: evidence.txt
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Pretend deployment of ${{ github.sha }}"
