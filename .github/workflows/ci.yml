@@ -26,8 +26,37 @@ jobs:
           name: test-evidence
           path: evidence.txt
 
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Snyk scan
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          set +e
+          npx snyk@latest test --json-file-output=snyk.json
+          code=$?
+          echo "scanned_sha=${{ github.sha }}" > security-summary.txt
+          echo "run_id=${{ github.run_id }}" >> security-summary.txt
+          echo "trigger=${{ github.event_name }}" >> security-summary.txt
+          echo "snyk_exit_code=$code" >> security-summary.txt
+          cat security-summary.txt
+          exit $code
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence
+          path: |
+            snyk.json
+            security-summary.txt
+
   deploy:
-    needs: test
+    needs: [test, security-scan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:

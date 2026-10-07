@@ -4,5 +4,8 @@
   "private": true,
   "scripts": {
     "test": "node --test test/version.test.js"
+  },
+  "dependencies": {
+    "lodash": "4.18.1"
   }
 }
