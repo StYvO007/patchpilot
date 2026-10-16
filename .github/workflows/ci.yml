@@ -56,8 +56,24 @@ jobs:
             security-summary.txt
 
   deploy:
+    name: deploy
     needs: [test, security-scan]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Pretend deployment of ${{ github.sha }}"
+      - name: ServiceNow change
+        id: change
+        uses: ServiceNow/servicenow-devops-change@v6.1.0
+        with:
+          devops-integration-token: ${{ secrets.SN_DEVOPS_INTEGRATION_TOKEN }}
+          instance-url: ${{ secrets.SN_INSTANCE_URL }}
+          tool-id: ${{ secrets.SN_ORCHESTRATION_TOOL_ID }}
+          context-github: ${{ toJSON(github) }}
+          job-name: 'deploy'
+          change-request: '{"attributes":{"short_description":"PatchPilot deployment from CI","description":"Automated deployment request raised by the PatchPilot pipeline."}}'
+          interval: '30'
+          timeout: '1800'
+          changeCreationTimeOut: '600'
+          abortOnChangeCreationFailure: true
+          abortOnChangeStepTimeout: true
+      - run: echo "Change ${{ steps.change.outputs.change-request-number }} approved. Pretend deployment of ${{ github.sha }}"
